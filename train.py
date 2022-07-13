@@ -12,8 +12,8 @@ from utils.model import get_model, get_vocoder, get_param_num
 from utils.tools import to_device, log, synth_one_sample
 from model import FastSpeech2Loss
 from dataset import Dataset
-
 from evaluate import evaluate
+from sparseoptimizer.pruning.scheduler import PrunerScheduler
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -29,6 +29,7 @@ def main(args, configs):
     )
     batch_size = train_config["optimizer"]["batch_size"]
     group_size = 4  # Set this larger than 1 to enable sorting in Dataset
+    num_steps = train_config["step"]["total_step"] #// (batch_size * group_size)
     assert batch_size * group_size < len(dataset)
     loader = DataLoader(
         dataset,
@@ -38,11 +39,31 @@ def main(args, configs):
     )
 
     # Prepare model
+    sparsities = [0.5, 0.75, 0.875, 0.9375]
     model, optimizer = get_model(args, configs, device, train=True)
+    if sparsities is not None:
+        ckpt = torch.load('dense_path')
+        model.load_state_dict(ckpt["model"])
     model = nn.DataParallel(model)
     num_param = get_param_num(model)
     Loss = FastSpeech2Loss(preprocess_config, model_config).to(device)
     print("Number of FastSpeech2 Parameters:", num_param)
+
+
+    log_path = './pruneLog_V2'
+    if sparsities is not None:
+        pruner = PrunerScheduler(model,
+                                 model_name='fastspeech',
+                                 optimizer=optimizer._optimizer,
+                                 steps_per_epoch=len(loader),
+                                 num_steps=num_steps,
+                                 prune_freq=500,
+                                 sparsities=sparsities,
+                                 rank=0,
+                                 bank_size=64,
+                                 log_path=log_path)
+    else:
+        pruner = None
 
     # Load vocoder
     vocoder = get_vocoder(model_config, device)
@@ -95,6 +116,9 @@ def main(args, configs):
                     # Update weights
                     optimizer.step_and_update_lr()
                     optimizer.zero_grad()
+                if pruner is not None:
+                    pruner.prune()
+                    pruner.update_metrics(10-total_loss)
 
                 if step % log_step == 0:
                     losses = [l.item() for l in losses]
