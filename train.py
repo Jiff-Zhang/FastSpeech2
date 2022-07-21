@@ -13,7 +13,8 @@ from utils.tools import to_device, log, synth_one_sample
 from model import FastSpeech2Loss
 from dataset import Dataset
 from evaluate import evaluate
-from sparseoptimizer.pruning.scheduler import PrunerScheduler
+#from sparseoptimizer.pruning.scheduler import PrunerScheduler
+from nn_optimizer.engine.pruner.stage_wise_pruner import PrunerScheduler
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -42,7 +43,7 @@ def main(args, configs):
     sparsities = [0.5, 0.75, 0.875, 0.9375]
     model, optimizer = get_model(args, configs, device, train=True)
     if sparsities is not None:
-        ckpt = torch.load('dense_path')
+        ckpt = torch.load('/home/luo/PycharmProjects/FastSpeech2/output/ckpt/LJSpeechV3/500000.pth.tar')
         model.load_state_dict(ckpt["model"])
     model = nn.DataParallel(model)
     num_param = get_param_num(model)
@@ -50,14 +51,14 @@ def main(args, configs):
     print("Number of FastSpeech2 Parameters:", num_param)
 
 
-    log_path = './pruneLog_V2'
+    log_path = './new_pruner_test'
     if sparsities is not None:
         pruner = PrunerScheduler(model,
                                  model_name='fastspeech',
                                  optimizer=optimizer._optimizer,
                                  steps_per_epoch=len(loader),
                                  num_steps=num_steps,
-                                 prune_freq=500,
+                                 frequency=500,
                                  sparsities=sparsities,
                                  rank=0,
                                  bank_size=64,
