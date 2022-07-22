@@ -40,7 +40,6 @@ class FastSpeech2(nn.Module):
                 model_config["transformer"]["encoder_hidden"],
             )
 
-    """
     # onnx export
     def forward(
         self,
@@ -54,10 +53,10 @@ class FastSpeech2(nn.Module):
         p_targets=None,
         e_targets=None,
         d_targets=None,
-        p_control=1.0,
-        e_control=1.0,
-        d_control=1.0,
     ):
+        p_control=1.0
+        e_control=1.0
+        d_control=1.0
         mel_masks = (
             get_mask_from_lengths(mel_lens, max_mel_len)
             if mel_lens is not None
@@ -168,3 +167,4 @@ class FastSpeech2(nn.Module):
             src_lens,
             mel_lens,
         )
+    """
