@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class FastSpeech2Loss(nn.Module):
@@ -80,6 +81,26 @@ class FastSpeech2Loss(nn.Module):
         total_loss = (
             mel_loss + postnet_mel_loss + duration_loss + pitch_loss + energy_loss
         )
+
+        # def get_gate_loss(mel_masks):
+        #     # [N]
+        #     target_length = torch.sum(mel_masks.float(), dim=1)
+        #     # [N, S]
+        #     gate_t = (~mel_masks).float()
+        #     gate_t = torch.cat([gate_t[:, 1:], torch.ones_like(gate_t[:, :1])], dim=1)
+        #     # [1, S]
+        #     idx = torch.arange(mel_masks.shape[1], dtype=gate_t.dtype) \
+        #         .to(gate_t.device).unsqueeze(0) + 1
+        #     # [N]
+        #     random_decent = torch.zeros_like(target_length).uniform_(0.25, 0.5)
+        #     random_center = target_length - random_decent
+        #     # [N, S]
+        #     logits_gate_p = (idx - random_center.unsqueeze(1)) * 2
+
+        #     gate_loss = nn.BCEWithLogitsLoss()(logits_gate_p, gate_t)
+        #     return gate_loss
+
+        # gate_loss = get_gate_loss(mel_masks)
 
         return (
             total_loss,

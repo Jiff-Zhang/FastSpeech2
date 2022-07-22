@@ -42,7 +42,7 @@ def main(args, configs):
     sparsities = [0.5, 0.75, 0.875, 0.9375]
     model, optimizer = get_model(args, configs, device, train=True)
     if sparsities is not None:
-        ckpt = torch.load('dense_path')
+        ckpt = torch.load(configs[2]['path']['dense_ckpt_path'])
         model.load_state_dict(ckpt["model"])
     model = nn.DataParallel(model)
     num_param = get_param_num(model)
@@ -70,7 +70,8 @@ def main(args, configs):
 
     # Init logger
     for p in train_config["path"].values():
-        os.makedirs(p, exist_ok=True)
+        if not os.path.exists(p):
+            os.makedirs(p, exist_ok=True)
     train_log_path = os.path.join(train_config["path"]["log_path"], "train")
     val_log_path = os.path.join(train_config["path"]["log_path"], "val")
     os.makedirs(train_log_path, exist_ok=True)

@@ -40,6 +40,66 @@ class FastSpeech2(nn.Module):
                 model_config["transformer"]["encoder_hidden"],
             )
 
+    """
+    # onnx export
+    def forward(
+        self,
+        speakers,
+        texts,
+        src_masks,
+        max_src_len,
+        mels=None,
+        mel_lens=None,
+        max_mel_len=None,
+        p_targets=None,
+        e_targets=None,
+        d_targets=None,
+        p_control=1.0,
+        e_control=1.0,
+        d_control=1.0,
+    ):
+        mel_masks = (
+            get_mask_from_lengths(mel_lens, max_mel_len)
+            if mel_lens is not None
+            else None
+        )
+
+        output = self.encoder(texts, src_masks)
+
+        if self.speaker_emb is not None:
+            output = output + self.speaker_emb(speakers).unsqueeze(1).expand(
+                -1, max_src_len, -1
+            )
+
+        (
+            output,
+            p_predictions,
+            e_predictions,
+            log_d_predictions,
+            d_rounded,
+            mel_lens,
+            mel_masks,
+        ) = self.variance_adaptor(
+            output,
+            src_masks,
+            mel_masks,
+            max_mel_len,
+            p_targets,
+            e_targets,
+            d_targets,
+            p_control,
+            e_control,
+            d_control,
+        )
+
+        output, mel_masks = self.decoder(output, mel_masks)
+        output = self.mel_linear(output)
+
+        postnet_output = self.postnet(output) + output
+
+        return postnet_output
+
+    """
     def forward(
         self,
         speakers,

@@ -1,1 +1,1 @@
-from bonito.sparseoptimizer.pruning.scheduler import PrunerScheduler
+from .scheduler import PrunerScheduler

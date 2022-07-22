@@ -9,8 +9,8 @@ from torch.optim import Optimizer
 from .bbs_pruner import Prune as PruneBBS
 from .misc import generate_prune_dict
 
-from bonito.sparseoptimizer.utils.lr_scheduler import get_constant_linear_schedule_with_warmup
-from bonito.sparseoptimizer.utils.logger import BaseLogger
+from sparseoptimizer.utils.lr_scheduler import get_constant_linear_schedule_with_warmup
+from sparseoptimizer.utils.logger import BaseLogger
 
 
 def even_split(a, n):
@@ -30,7 +30,7 @@ def get_stage_steps(sparsities: list,num_steps: int,save_path:str,type: str='lin
     else:
         raise NotImplementedError("only support linear and exp stategy")
 
-    #save sparsity-num_step plot 
+    #save sparsity-num_step plot
     step_per_sparsity = [int(x*num_steps+0.5) for x in ratio]
     plt.plot(reverted_sparsities,step_per_sparsity,label=type)
     plt.legend(loc='upper left')
@@ -40,7 +40,7 @@ def get_stage_steps(sparsities: list,num_steps: int,save_path:str,type: str='lin
     start_step,end_step = 0,0
     for i,r in enumerate(ratio):
        end_step = start_step+int(ratio[i]*num_steps+0.5)
-       stage_wise_step.append([start_step,min(end_step,num_steps)]) 
+       stage_wise_step.append([start_step,min(end_step,num_steps)])
        start_step = end_step
     return stage_wise_step
 
@@ -53,21 +53,21 @@ class PrunerScheduler:
             steps_per_epoch: int,
             num_steps: int,
             sparsities: list,
-            log_path: str, 
+            log_path: str,
             rank: int,
             bank_size: int=64,
             prune_freq: int=100,
             finetune: bool=False,
-            log_freq: int=100,  
+            log_freq: int=100,
             ckpt_sparsities: list=None,
             pruner_resume_dict: dict=None,
             ):
 
         """
         Args:
-            model (unwarped_model) : model reference 
+            model (unwarped_model) : model reference
             model_name (str) : model type name , this name will be used to generate specifi prune dict
-            optimizer (torch.nn.optim.Optimizer) : 
+            optimizer (torch.nn.optim.Optimizer) :
             steps_per_epoch (int): number of steps per epoch
             num_steps (int) : total steps of the training phase
             sparsities (list) : list of sparsities used during pruning
@@ -77,8 +77,8 @@ class PrunerScheduler:
             prune_freq (int) : prune frequency
             finetune (bool) : only finetune the model
             log_freq (int) : logging frequency
-            ckpt_sparsities (list) : each sparsities is the target sparisity 
-                for model which need to be saved during pruning. When this parameter is setting, the sparisities 
+            ckpt_sparsities (list) : each sparsities is the target sparisity
+                for model which need to be saved during pruning. When this parameter is setting, the sparisities
                 parameter need to only contain single sparsity value.
             pruner_resume_dict: key in dict [path,load_model_states,load_optimizer_states]
         """
@@ -94,7 +94,7 @@ class PrunerScheduler:
         self.log_freq = log_freq
         self.rank = rank
 
-        self.pruners = [] 
+        self.pruners = []
         self.optim_schedulers = []
         self.stage_wise_steps = []
         self.prune_dicts = []
@@ -104,14 +104,14 @@ class PrunerScheduler:
         self.best_metric = 0
         self.index = -1
         self.resume_tag = False
-        
+
         # Decrease the sparsity with some buffer
         self.ckpt_sparsities = []
         if ckpt_sparsities:
             self.ckpt_sparsities = [x-0.015 for x in ckpt_sparsities]
 
         os.makedirs(self.log_path,exist_ok=True)
-        # Split steps into multi stage 
+        # Split steps into multi stage
         self.stage_wise_steps = list(get_stage_steps(sparsities=sparsities,
                                                      num_steps=num_steps,
                                                      save_path=os.path.join(self.log_path, 'sparsity_step.jpg'),
@@ -128,11 +128,11 @@ class PrunerScheduler:
             prune_step = int(0.8*(self.stage_wise_steps[i][1]-self.stage_wise_steps[i][0]))
             if self.finetune:
                 prune_step = 0
-            self.stage_wise_steps[i].insert(1,self.stage_wise_steps[i][0]+prune_step) 
+            self.stage_wise_steps[i].insert(1,self.stage_wise_steps[i][0]+prune_step)
             self.prune_steps.append(prune_step)
             self.prune_dicts.append(prune_dict)
             self.setup_infos=setup_info
-            
+
             self.logger.info(f"stage wise steps: {self.stage_wise_steps[i]}")
             self.logger.info(f"Prune dict: {prune_dict}")
 
@@ -168,7 +168,7 @@ class PrunerScheduler:
             if not self.resume_tag:
                 self.index += 1
 
-            # check which phase is the resume ckpt in,prune phase or finetune phase 
+            # check which phase is the resume ckpt in,prune phase or finetune phase
             if self.resume_tag:
                 resume_pruner_step = self.prune_steps[self.index] if self.step>=self.stage_wise_steps[self.index][1] \
                         else self.step-self.stage_wise_steps[self.index][0]
@@ -201,11 +201,11 @@ class PrunerScheduler:
             self.logger.info(f"Finished pruning model with sparsity {self.sparsities[self.index]}")
 
         if self.rank in [-1,0]:
-            if self.step%self.log_freq==0: 
+            if self.step%self.log_freq==0:
                 self.logger.info(f"model sparsity{self.sparsity()[1]}")
             if self.step>0 and (self.step+1)%self.prune_freq==0:
                 curr_sparsity = self.sparsity()[1]
-                
+
                 if self.ckpt_sparsities and curr_sparsity>=self.ckpt_sparsities[0]:
                     ckpt_path = os.path.join(
                         self.log_path,
@@ -217,7 +217,7 @@ class PrunerScheduler:
                     self.logger.info(f"Get model with sparsity{curr_sparsity}")
 
         self.step += 1
-        self.init_pruner() 
+        self.init_pruner()
 
     def sparsity(self):
         total_param = 0
@@ -225,7 +225,7 @@ class PrunerScheduler:
         layer_sparse_rate = {}
         for name,parameter in self.model.named_parameters():
             if self.prune_dicts[self.index].get(name):
-               num_param = torch.numel(parameter) 
+               num_param = torch.numel(parameter)
                zero_param = num_param-torch.nonzero(parameter).shape[0]
                layer_sparse_rate[name] = zero_param/num_param
                total_param += num_param

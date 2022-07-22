@@ -515,7 +515,7 @@ class Prune:
             mask = torch.as_tensor(
                 mask, dtype=transpose_weight.dtype, device=transpose_weight.device
             )
-            mask = mask.weight.reshape(weight_shape[0], weight_shape[1], weight_shape[2])
+            mask = mask.data.reshape(weight_shape[0], weight_shape[1], weight_shape[2])
             self._mask[name][:] = mask
         else:
             self._mask[name][:] = 0
